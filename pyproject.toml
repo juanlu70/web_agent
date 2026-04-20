@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "web_agent"
+version = "0.1.0"
+description = "A browser agent managed by IA made in python"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9.0",
+    "playwright>=1.40.0",
+    "pyyaml>=6.0",
+    "pdfplumber>=0.10.0",
+    "python-docx>=1.1.0",
+    "streamlit>=1.30.0",
+]
+
+[project.scripts]
+web-agent = "web_agent.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["web_agent*"]

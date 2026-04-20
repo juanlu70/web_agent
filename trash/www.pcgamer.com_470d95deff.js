@@ -1,0 +1,1 @@
+const e=(e,n)=>{n={label:"viafoura",url:document.URL,commentCount:Alpine.store("Viafoura").pageCommentCount??0,...n},window.dispatchOrQueueAction("freyr.sendEventToFreyr",{name:e,eventObject:{element:{...n}}})};function n(){return-1!==document.cookie.indexOf("kiosq_user=")}export{n as h,e as s};

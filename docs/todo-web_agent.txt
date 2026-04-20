@@ -1,0 +1,4 @@
+- The main program is a server that is running as a daemon 
+
+
+opencode -s ses_2659c85feffejbD16YC3Y8aOws
