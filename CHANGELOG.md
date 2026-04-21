@@ -2,6 +2,22 @@
 
 All notable changes to the web_agent project will be documented in this file.
 
+## [1.1.0] - 2025-04-19
+
+### Added
+
+- **Multiple file analysis**: `--files` / `-f` flag now accepts multiple files: `-f file1.pdf file2.md file3.csv`
+- `FileAnalyzer.read_files()` method for batch file reading
+- `AnalysisAgent` combines content from all files into a single analysis prompt
+- Streamlit UI: file uploader now supports multiple files (`accept_multiple_files=True`)
+
+### Changed
+
+- `--file` renamed to `--files` / `-f` (accepts multiple values via `nargs='+'`)
+- `file_path: str` changed to `file_paths: list[str]` across: Orchestrator, AnalysisAgent, Server, Client, CLI, UI
+- Server API: `file_path` field changed to `file_paths` (array of strings)
+- Client API: `file_path` parameter changed to `file_paths` (list of strings)
+
 ## [1.0.0] - 2025-04-19
 
 ### Added

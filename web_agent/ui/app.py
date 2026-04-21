@@ -68,11 +68,12 @@ def render_sidebar():
         deep = st.toggle("Deep Search Mode", value=False, help=f"Return up to {config.deep_search_results} results instead of {config.normal_search_results}")
 
         st.divider()
-        st.subheader("Query Options")
-        uploaded_file = st.file_uploader(
-            "Upload a file to analyze",
+        st.subheader("File Analysis")
+        uploaded_files = st.file_uploader(
+            "Upload files to analyze (multiple allowed)",
             type=["txt", "md", "csv", "json", "py", "js", "ts", "html", "css", "xml", "yaml", "yml", "pdf", "docx"],
-            help="Upload a file for the agent to analyze",
+            accept_multiple_files=True,
+            help="Upload one or more files for the agent to analyze",
         )
 
         st.divider()
@@ -95,7 +96,7 @@ def render_sidebar():
         if verbose:
             logging.getLogger().setLevel(logging.DEBUG)
 
-        return server_url, config, deep, uploaded_file
+        return server_url, config, deep, uploaded_files
 
 
 def save_uploaded_file(uploaded_file) -> str:
@@ -114,7 +115,7 @@ def render_chat():
 
 def main():
     init_session_state()
-    server_url, config, deep, uploaded_file = render_sidebar()
+    server_url, config, deep, uploaded_files = render_sidebar()
 
     st.title("🌐 Web Agent")
     st.caption(f"Client connected to: {server_url}")
@@ -135,10 +136,11 @@ def main():
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            file_path = None
-            if uploaded_file is not None:
-                file_path = save_uploaded_file(uploaded_file)
-                st.info(f"📎 Analyzing file: {uploaded_file.name}")
+            file_paths = []
+            if uploaded_files:
+                for uf in uploaded_files:
+                    file_paths.append(save_uploaded_file(uf))
+                st.info(f"📎 Analyzing {len(uploaded_files)} file(s): {', '.join(uf.name for uf in uploaded_files)}")
 
             status_area = st.empty()
             result_area = st.empty()
@@ -148,8 +150,8 @@ def main():
                 flags.append(f"🔍 Deep search ({config.deep_search_results} results)")
             else:
                 flags.append(f"🔍 Normal search ({config.normal_search_results} results)")
-            if file_path:
-                flags.append(f"📎 File: {uploaded_file.name}")
+            if file_paths:
+                flags.append(f"📎 {len(file_paths)} file(s)")
             flags.append(f"🔌 Server: {server_url}")
 
             status_area.info(" | ".join(flags))
@@ -157,7 +159,7 @@ def main():
             try:
                 status_area.info("⏳ Processing your request...")
                 result = run_async(
-                    client.request(prompt, deep=deep, file_path=file_path, sync=True)
+                    client.request(prompt, deep=deep, file_paths=file_paths or None, sync=True)
                 )
                 status_val = result.get("status", "unknown")
                 if status_val == "completed":

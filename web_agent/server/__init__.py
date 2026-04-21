@@ -38,13 +38,16 @@ class WebAgentServer:
             return web.json_response({"error": "Missing 'query' field"}, status=400)
 
         deep = data.get("deep", False)
-        file_path = data.get("file_path")
+        file_paths = data.get("file_paths", [])
+        if isinstance(file_paths, str):
+            file_paths = [file_paths]
+        file_paths = file_paths or None
 
         task_id = str(uuid.uuid4())[:8]
 
         async def _run():
             try:
-                result = await self.orchestrator.handle_request(query, file_path=file_path)
+                result = await self.orchestrator.handle_request(query, file_paths=file_paths)
                 return {"task_id": task_id, "status": "completed", "result": result}
             except Exception as e:
                 logger.error("Task %s failed: %s", task_id, e)

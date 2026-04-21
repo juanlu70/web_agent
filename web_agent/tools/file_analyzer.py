@@ -119,6 +119,13 @@ class FileAnalyzer:
             return {"error": f"Failed to read DOCX: {e}"}
 
 
+    def read_files(self, file_paths: list[str]) -> list[dict]:
+        results = []
+        for fp in file_paths:
+            results.append(self.read_file(fp))
+        return results
+
+
 def is_file_analysis_request(request: str) -> bool:
     keywords = ["analyze", "analyse", "summarize", "summarise", "review", "read", "examine", "inspect"]
     file_keywords = ["file", "document", "pdf", "docx"]

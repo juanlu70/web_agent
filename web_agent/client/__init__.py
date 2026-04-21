@@ -14,14 +14,14 @@ class WebAgentClient:
         self.config = config or Config()
         self.server_url = (server_url or self.config.server_url).rstrip("/")
 
-    async def request(self, query: str, deep: bool = False, file_path: Optional[str] = None, sync: bool = True) -> dict:
+    async def request(self, query: str, deep: bool = False, file_paths: Optional[list[str]] = None, sync: bool = True) -> dict:
         payload = {
             "query": query,
             "deep": deep,
             "sync": sync,
         }
-        if file_path:
-            payload["file_path"] = file_path
+        if file_paths:
+            payload["file_paths"] = file_paths
 
         async with aiohttp.ClientSession() as session:
             async with session.post(f"{self.server_url}/request", json=payload) as resp:
@@ -46,9 +46,9 @@ class WebAgentClient:
                 resp.raise_for_status()
                 return await resp.json()
 
-    def sync_request(self, query: str, deep: bool = False, file_path: Optional[str] = None) -> dict:
+    def sync_request(self, query: str, deep: bool = False, file_paths: Optional[list[str]] = None) -> dict:
         import asyncio
-        return asyncio.run(self.request(query, deep=deep, file_path=file_path, sync=True))
+        return asyncio.run(self.request(query, deep=deep, file_paths=file_paths, sync=True))
 
     def sync_health(self) -> dict:
         import asyncio

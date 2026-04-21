@@ -17,9 +17,9 @@ def setup_logging(verbose: bool = False) -> None:
     )
 
 
-async def send_request(client: WebAgentClient, query: str, deep: bool = False, file_path: str = None) -> str:
+async def send_request(client: WebAgentClient, query: str, deep: bool = False, file_paths: list[str] = None) -> str:
     try:
-        result = await client.request(query, deep=deep, file_path=file_path, sync=True)
+        result = await client.request(query, deep=deep, file_paths=file_paths, sync=True)
     except Exception as e:
         return f"Error connecting to server: {e}"
 
@@ -45,7 +45,9 @@ async def interactive_mode(client: WebAgentClient, deep: bool = False) -> None:
         print(f"Deep search: ON ({client.config.deep_search_results} results)")
     else:
         print(f"Normal search: {client.config.normal_search_results} results")
-    print("Tip: prefix with 'file:<path> ' to analyze a file, e.g.: file:report.pdf summarize this")
+    print("Tips:")
+    print("  - prefix with 'file:path1,path2 ' to analyze files, e.g.: file:report.pdf,notes.md summarize")
+    print("  - type 'exit' or 'quit' to stop")
     print()
 
     while True:
@@ -61,15 +63,15 @@ async def interactive_mode(client: WebAgentClient, deep: bool = False) -> None:
             print("Goodbye!")
             break
 
-        file_path = None
+        file_paths = None
         if request.lower().startswith("file:"):
             parts = request.split(None, 1)
-            if len(parts) >= 1:
-                file_path = parts[0][5:]
-                request = parts[1] if len(parts) > 1 else "analyze this file"
+            file_part = parts[0][5:]
+            file_paths = [f.strip() for f in file_part.split(",")]
+            request = parts[1] if len(parts) > 1 else "analyze these files"
 
         try:
-            result = await send_request(client, request, deep=deep, file_path=file_path)
+            result = await send_request(client, request, deep=deep, file_paths=file_paths)
             print(f"\nAgent> {result}\n")
         except KeyboardInterrupt:
             print("\nInterrupted.")
@@ -86,10 +88,11 @@ def main() -> None:
         help="The request to process (if omitted, enters interactive mode)",
     )
     parser.add_argument(
-        "--file", "-f",
+        "--files", "-f",
+        nargs="+",
         default=None,
-        dest="file",
-        help="Path to a file to analyze",
+        dest="files",
+        help="Files to analyze (supports multiple: -f file1.pdf file2.md)",
     )
     parser.add_argument(
         "--server",
@@ -121,12 +124,16 @@ def main() -> None:
     client = WebAgentClient(server_url=args.server, config=config)
 
     request = " ".join(args.request) if args.request else None
+    file_paths = args.files
 
-    if request:
-        result = asyncio.run(send_request(client, request, deep=args.deep, file_path=args.file))
+    if request and file_paths:
+        result = asyncio.run(send_request(client, request, deep=args.deep, file_paths=file_paths))
         print(result)
-    elif args.file:
-        result = asyncio.run(send_request(client, "analyze this file", deep=args.deep, file_path=args.file))
+    elif request:
+        result = asyncio.run(send_request(client, request, deep=args.deep))
+        print(result)
+    elif file_paths:
+        result = asyncio.run(send_request(client, "analyze these files", deep=args.deep, file_paths=file_paths))
         print(result)
     else:
         asyncio.run(interactive_mode(client, deep=args.deep))

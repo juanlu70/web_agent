@@ -231,29 +231,41 @@ class AnalysisAgent:
         self.llm = OllamaClient(self.config)
         self.file_analyzer = FileAnalyzer()
 
-    async def analyze(self, request: str, file_path: str) -> str:
-        logger.info("AnalysisAgent analyzing file: %s", file_path)
+    async def analyze(self, request: str, file_paths: list[str]) -> str:
+        logger.info("AnalysisAgent analyzing %d file(s): %s", len(file_paths), ", ".join(file_paths))
 
-        file_data = self.file_analyzer.read_file(file_path)
+        files_data = self.file_analyzer.read_files(file_paths)
 
-        if "error" in file_data:
-            return f"Error reading file: {file_data['error']}"
+        file_sections = []
+        errors = []
+        for file_data in files_data:
+            if "error" in file_data:
+                errors.append(file_data["error"])
+                continue
+            file_name = file_data.get("name", "unknown")
+            file_type = file_data.get("type", "unknown")
+            content = file_data.get("content", "")
+            if not content.strip():
+                errors.append(f"The file '{file_name}' appears to be empty.")
+                continue
+            file_sections.append(f"### File: {file_name} (type: {file_type})\n\n{content}")
 
-        content = file_data.get("content", "")
-        file_name = file_data.get("name", file_path)
-        file_type = file_data.get("type", "unknown")
+        if errors and not file_sections:
+            return "Errors reading files:\n" + "\n".join(f"- {e}" for e in errors)
 
-        if not content.strip():
-            return f"The file '{file_name}' appears to be empty."
+        combined_content = "\n\n---\n\n".join(file_sections)
+        error_note = ""
+        if errors:
+            error_note = "\n\nNote: Some files could not be read:\n" + "\n".join(f"- {e}" for e in errors)
 
         prompt = f"""User request: {request}
 
-File: {file_name} (type: {file_type})
+Files provided ({len(file_sections)} file(s)):
 
-Content:
-{content}
+{combined_content}
+{error_note}
 
-Please fulfill the user's request for this file."""
+Please fulfill the user's request across all the provided files."""
 
         system = ANALYSIS_SYSTEM_PROMPT.format(guardrails=self.guardrails)
         response = await self.llm.chat(
@@ -314,12 +326,12 @@ class OrchestratorAgent:
         self.conversation_history = ConversationHistory(max_entries=self.config.max_history_entries)
         self.active_agents: dict[str, AgentResult] = {}
 
-    async def handle_request(self, request: str, file_path: Optional[str] = None) -> str:
+    async def handle_request(self, request: str, file_paths: Optional[list[str]] = None) -> str:
         logger.info("Orchestrator received request: %s", request[:200])
 
-        if file_path:
-            logger.info("Mode: file analysis | File: %s", file_path)
-            result = await self.analysis_agent.analyze(request, file_path)
+        if file_paths:
+            logger.info("Mode: file analysis | Files: %s", ", ".join(file_paths))
+            result = await self.analysis_agent.analyze(request, file_paths)
             self.conversation_history.add_entry(request, result, web_search_used=False)
             return result
 
