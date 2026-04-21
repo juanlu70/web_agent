@@ -1,1 +1,0 @@
-const n=()=>window.document.documentElement.clientWidth||window.document.body.clientWidth||window.innerWidth,t=()=>n()<700,e=()=>{const t=n();return t>=700&&t<1e3},d=()=>n()>=1e3;export{e as a,d as b,n as g,t as i};

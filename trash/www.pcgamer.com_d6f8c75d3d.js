@@ -1,1 +1,0 @@
-import{r as t}from"./reduxStore-BtBBq4g3.js";function e(t,e,r){let n;function o(){let o=e(t.getState());o!==n&&(n=o,r(n))}let s=t.subscribe(o);return o(),s}function r(r,n){return e(t,r,n)}export{e as o,r as s};

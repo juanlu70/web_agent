@@ -1,1 +1,0 @@
-const e="data-lazy-src",t=e=>e.isIntersecting,r=r=>{const s=(o=e,e=>{const t=e.getAttribute(o);return t&&e.setAttribute("src",t),e});var o;const c=new IntersectionObserver(((e,r)=>e.filter(t).map((e=>e.target)).map(s).forEach((e=>r.unobserve(e)))),{threshold:.1});(t=>t.querySelectorAll(`iframe[${e}]`))(r||document).forEach((e=>c.observe(e)))};export{r as i};
