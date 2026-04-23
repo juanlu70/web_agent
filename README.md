@@ -34,7 +34,7 @@ The server is the main orchestrator. Clients connect via HTTP. The orchestrator 
 ## Requirements
 
 - Python 3.11+
-- [Ollama](https://ollama.ai) running locally with a model pulled (e.g. `ollama pull glm-5.1:cloud`)
+- An LLM provider: [Ollama](https://ollama.ai) (local, free) **or** an OpenAI/Anthropic/OpenRouter API key
 - Chromium (for Playwright — auto-installed)
 
 ## Install
@@ -43,6 +43,65 @@ The server is the main orchestrator. Clients connect via HTTP. The orchestrator 
 pip install -r requirements.txt
 playwright install chromium
 ```
+
+## Setup
+
+Before running for the first time, configure your LLM provider and model:
+
+```bash
+./web_agent_setup.py
+```
+
+This interactive tool will:
+
+1. **List available providers**: Ollama (local), OpenAI, Anthropic, OpenRouter
+2. **For Ollama**: connect to your local instance, list all pulled models, and let you pick one
+3. **For cloud providers**: ask for your API key, API URL, and model name
+4. **Save** everything to `config.yaml`
+
+Example session:
+
+```
+==================================================
+  Web Agent Setup
+==================================================
+
+  Current provider: ollama
+  Ollama URL:   http://localhost:11434
+  Ollama model: glm-5.1:cloud
+
+Available LLM providers:
+
+  1. Ollama (local)
+  2. OpenAI [requires API key]
+  3. Anthropic [requires API key]
+  4. OpenRouter [requires API key]
+
+Select provider [1]: 1
+
+Checking Ollama for available models...
+
+Available models:
+  1. glm-5.1:cloud (323 MB)
+  2. glm-4.7-flash-agent:latest (19019 MB)
+  3. qwen3-coder:480b-cloud
+
+Select model [1]: 1
+
+--------------------------------------------------
+  Configuration summary:
+
+  Provider: ollama
+  Ollama URL:   http://localhost:11434
+  Model:         glm-5.1:cloud
+
+Save configuration? [Y/n]: Y
+  Saved to .../config.yaml
+
+Setup complete. You can now start the server with: ./web_agent.py
+```
+
+You can also edit `config.yaml` directly (see [Configuration](#configuration-configyaml) below).
 
 ## Quick Start
 
@@ -60,6 +119,10 @@ playwright install chromium
 
 # Interactive mode
 ./web_agent_client.py
+
+# View request history
+./web_agent_client.py --history
+./web_agent_client.py --history --history-limit 5
 
 # Web UI
 streamlit run web_agent/ui/app.py
@@ -90,6 +153,7 @@ The server is a daemon that listens for HTTP requests and runs the orchestrator 
 | `GET` | `/health` | Server health check |
 | `GET` | `/config` | Get server configuration |
 | `GET` | `/status/{task_id}` | Check async task status |
+| `GET` | `/history` | Get request history |
 
 #### POST /request
 
@@ -130,6 +194,35 @@ The server is a daemon that listens for HTTP requests and runs the orchestrator 
 
 Then poll `GET /status/a1b2c3d4` until `status` is `completed` or `failed`.
 
+#### GET /history
+
+Returns the full request history log. Each entry includes the query, result, file paths, source, and deep mode flag.
+
+**Query params:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | int | all | Maximum number of entries to return |
+
+**Response:**
+
+```json
+{
+  "history": [
+    {
+      "id": "a1b2c3d4",
+      "timestamp": "2025-04-23T14:30:00",
+      "query": "search for wireless headphones",
+      "file_paths": [],
+      "result": "Here is a summary...",
+      "source": "web search",
+      "deep": false
+    }
+  ],
+  "count": 1
+}
+```
+
 ---
 
 ## CLI Client (`web_agent_client.py`)
@@ -145,6 +238,8 @@ If no request is given, enters interactive mode.
 | `--files`, `-f` | none | Files to analyze (supports multiple: `-f a.pdf b.md`) |
 | `--server` | from config | Server URL (e.g. `http://192.168.1.10:8400`) |
 | `--deep` | off | Deep search: 50 results instead of 10 |
+| `--history` | off | Show request history from the server |
+| `--history-limit` | all | Limit number of history entries (use with `--history`) |
 | `--config` | `config.yaml` | Path to YAML config file |
 | `--verbose`, `-v` | off | Enable debug logging |
 
@@ -171,6 +266,12 @@ If no request is given, enters interactive mode.
 You> search for wireless headphones
 You> file:report.pdf,notes.md compare both
 You> exit
+
+# View request history
+./web_agent_client.py --history
+
+# View last 5 requests
+./web_agent_client.py --history --history-limit 5
 ```
 
 ---
@@ -181,7 +282,7 @@ You> exit
 streamlit run web_agent/ui/app.py
 ```
 
-The sidebar provides controls for all settings: server URL, deep search, file upload (multiple files), config display, and logging. Opens at `http://localhost:8501`.
+The sidebar provides controls for all settings: server URL, deep search, file upload (multiple files), config display, logging, and request history. Opens at `http://localhost:8501`.
 
 ---
 
@@ -195,6 +296,7 @@ The sidebar provides controls for all settings: server URL, deep search, file up
 6. **Skills**: The agent learns how to browse specific websites from `skills/*.md` files
 7. **Guardrails**: Safety rules from `guardrails.md` are injected into all agents
 8. **Conversation history**: Last 15 interactions are stored and used as context for future requests
+9. **Request log**: All requests (including files provided) are logged to `~/.web_agent/request_log.json` and accessible via `--history` CLI flag, `/history` API endpoint, or the Streamlit UI
 
 ---
 
@@ -205,9 +307,13 @@ The sidebar provides controls for all settings: server URL, deep search, file up
 server_host: "127.0.0.1"    # 0.0.0.0 to open to network
 server_port: 8400
 
-# LLM
+# LLM Provider (ollama, openai, anthropic, openrouter)
+llm_provider: "ollama"
 ollama_base_url: "http://localhost:11434"
-ollama_model: "glm-5.1:cloud"
+ollama_model: "glm-5.1:cloud"     # Ollama model (auto-detected if empty)
+llm_api_url: ""                   # API URL for cloud providers
+llm_api_key: ""                   # API key for cloud providers
+llm_model: ""                     # Model name for cloud providers
 
 # Search
 normal_search_results: 10   # results per normal search
@@ -230,6 +336,52 @@ guardrails_file: ""
 max_history_entries: 15
 ```
 
+### LLM Providers
+
+| Provider | Config | API Key Required |
+|----------|--------|:---:|
+| **Ollama** (local) | `ollama_base_url` + `ollama_model` | No |
+| **OpenAI** | `llm_api_url` + `llm_api_key` + `llm_model` | Yes |
+| **Anthropic** | `llm_api_url` + `llm_api_key` + `llm_model` | Yes |
+| **OpenRouter** | `llm_api_url` + `llm_api_key` + `llm_model` | Yes |
+
+Use `./web_agent_setup.py` to configure interactively, or edit `config.yaml` directly.
+
+#### Ollama (default, local, free)
+
+```yaml
+llm_provider: "ollama"
+ollama_base_url: "http://localhost:11434"
+ollama_model: "glm-5.1:cloud"
+```
+
+#### OpenAI
+
+```yaml
+llm_provider: "openai"
+llm_api_url: "https://api.openai.com/v1"
+llm_api_key: "sk-..."
+llm_model: "gpt-4o"
+```
+
+#### Anthropic
+
+```yaml
+llm_provider: "anthropic"
+llm_api_url: "https://api.anthropic.com"
+llm_api_key: "sk-ant-..."
+llm_model: "claude-sonnet-4-20250514"
+```
+
+#### OpenRouter
+
+```yaml
+llm_provider: "openrouter"
+llm_api_url: "https://openrouter.ai/api/v1"
+llm_api_key: "sk-or-..."
+llm_model: "openai/gpt-4o"
+```
+
 ---
 
 ## Project Structure
@@ -237,6 +389,7 @@ max_history_entries: 15
 ```
 web_agent.py              # Server entry point
 web_agent_client.py       # CLI client entry point
+web_agent_setup.py        # Interactive setup tool (provider & model config)
 config.yaml               # Main configuration
 guardrails.md             # Safety rules for all agents
 skills/                   # Website navigation skills
@@ -247,9 +400,10 @@ web_agent/
   server/                 # HTTP server (aiohttp)
   client/                 # HTTP client
   agent/                  # Orchestrator, BrowsingAgent, AnalysisAgent
+  agent/request_log.py   # Structured request history logger (JSON)
   browser/                # Playwright browser session
   search/                 # Google search scraper
-  llm/                    # Ollama API client
+  llm/                    # Unified LLM client (Ollama, OpenAI, Anthropic, OpenRouter)
   skills/                 # Skill manager (SKILL.md loader)
   tools/                  # browser, web_search, web_fetch, file_analyzer
   config/                 # Settings (YAML loader)

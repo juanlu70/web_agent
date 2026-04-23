@@ -52,6 +52,44 @@ def init_session_state():
             st.session_state[key] = val
 
 
+def render_history(client):
+    st.subheader("📋 Request History")
+    limit = st.number_input("Max entries to show", min_value=1, max_value=500, value=20, key="history_limit")
+    if st.button("🔄 Load History", key="load_history"):
+        try:
+            data = run_async(client.get_history(limit=limit))
+            entries = data.get("history", [])
+            if not entries:
+                st.info("No request history found.")
+                return
+            st.caption(f"Showing {len(entries)} of {data.get('count', len(entries))} entries")
+            for i, entry in enumerate(reversed(entries), 1):
+                ts = entry.get("timestamp", "?")
+                query = entry.get("query", "")
+                files = entry.get("file_paths", [])
+                source = entry.get("source", "")
+                deep = entry.get("deep", False)
+                result = entry.get("result", "")
+                result_preview = result[:300] + "..." if len(result) > 300 else result
+
+                flags = []
+                if deep:
+                    flags.append("deep")
+                flags.append(source)
+                label = f"{ts} — {query[:80]}"
+                if files:
+                    label += f" [{len(files)} file(s)]"
+
+                with st.expander(label):
+                    st.markdown(f"**Query:** {query}")
+                    if files:
+                        st.markdown(f"**Files:** {', '.join(files)}")
+                    st.markdown(f"**Mode:** {' | '.join(flags)}")
+                    st.markdown(f"**Result:**\n\n{result_preview}")
+        except Exception as e:
+            st.warning(f"Cannot load history: {e}")
+
+
 def render_sidebar():
     with st.sidebar:
         st.header("⚙️ Configuration")
@@ -96,7 +134,10 @@ def render_sidebar():
         if verbose:
             logging.getLogger().setLevel(logging.DEBUG)
 
-        return server_url, config, deep, uploaded_files
+        st.divider()
+        show_history = st.toggle("📋 Request History", value=False, help="View request history from server")
+
+        return server_url, config, deep, uploaded_files, show_history
 
 
 def save_uploaded_file(uploaded_file) -> str:
@@ -115,12 +156,16 @@ def render_chat():
 
 def main():
     init_session_state()
-    server_url, config, deep, uploaded_files = render_sidebar()
+    server_url, config, deep, uploaded_files, show_history = render_sidebar()
 
     st.title("🌐 Web Agent")
     st.caption(f"Client connected to: {server_url}")
 
     client = WebAgentClient(server_url=server_url, config=config)
+
+    if show_history:
+        render_history(client)
+        st.divider()
 
     try:
         health = run_async(client.health())

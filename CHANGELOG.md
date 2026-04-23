@@ -2,6 +2,17 @@
 
 All notable changes to the web_agent project will be documented in this file.
 
+## [1.3.0] - 2025-04-23
+
+### Added
+
+- **Request history log**: All requests to the model are saved to `~/.web_agent/request_log.json`, including query, result, file paths provided, source (AI knowledge / web search / error), and deep mode flag
+- **`RequestLog` class** (`web_agent/agent/request_log.py`): Structured JSON-based request logger with add/get/clear methods
+- **`GET /history` API endpoint**: Returns full request history from the server, with optional `?limit=N` query param
+- **`--history` CLI flag**: View request history from the command line
+- **`--history-limit` CLI flag**: Limit number of history entries displayed (use with `--history`)
+- **Streamlit UI history view**: Toggle "📋 Request History" in sidebar to browse past requests with expandable details (query, files, mode, result preview)
+
 ## [1.2.0] - 2025-04-23
 
 ### Added

@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import sys
+from typing import Optional
 
 from web_agent.client import WebAgentClient
 from web_agent.config.settings import Config
@@ -30,6 +31,48 @@ async def send_request(client: WebAgentClient, query: str, deep: bool = False, f
         return f"Error: {result.get('error', 'Unknown error')}"
     else:
         return json.dumps(result, indent=2)
+
+
+def format_history_entry(entry: dict, index: int) -> str:
+    ts = entry.get("timestamp", "?")
+    query = entry.get("query", "")
+    files = entry.get("file_paths", [])
+    source = entry.get("source", "")
+    deep = entry.get("deep", False)
+    result = entry.get("result", "")
+    result_preview = result[:200] + "..." if len(result) > 200 else result
+
+    lines = [
+        f"[{index}] {ts}",
+        f"  Query: {query}",
+    ]
+    if files:
+        lines.append(f"  Files: {', '.join(files)}")
+    flags = []
+    if deep:
+        flags.append("deep")
+    flags.append(source)
+    lines.append(f"  Mode: {' | '.join(flags)}")
+    lines.append(f"  Result: {result_preview}")
+    return "\n".join(lines)
+
+
+async def show_history(client: WebAgentClient, limit: Optional[int] = None) -> None:
+    try:
+        data = await client.get_history(limit=limit)
+    except Exception as e:
+        print(f"Error fetching history: {e}")
+        return
+
+    entries = data.get("history", [])
+    if not entries:
+        print("No request history found.")
+        return
+
+    print(f"Request History ({len(entries)} entries)\n")
+    for i, entry in enumerate(entries, 1):
+        print(format_history_entry(entry, i))
+        print()
 
 
 async def interactive_mode(client: WebAgentClient, deep: bool = False) -> None:
@@ -114,6 +157,17 @@ def main() -> None:
         action="store_true",
         help="Enable verbose logging",
     )
+    parser.add_argument(
+        "--history",
+        action="store_true",
+        help="Show request history from the server",
+    )
+    parser.add_argument(
+        "--history-limit",
+        type=int,
+        default=None,
+        help="Limit number of history entries to show (with --history)",
+    )
 
     args = parser.parse_args()
 
@@ -126,7 +180,9 @@ def main() -> None:
     request = " ".join(args.request) if args.request else None
     file_paths = args.files
 
-    if request and file_paths:
+    if args.history:
+        asyncio.run(show_history(client, limit=args.history_limit))
+    elif request and file_paths:
         result = asyncio.run(send_request(client, request, deep=args.deep, file_paths=file_paths))
         print(result)
     elif request:

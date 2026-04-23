@@ -8,6 +8,7 @@ from typing import Optional
 from aiohttp import web
 
 from web_agent.agent.orchestrator import OrchestratorAgent
+from web_agent.agent.request_log import RequestLog
 from web_agent.config.settings import Config
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class WebAgentServer:
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()
         self.orchestrator = OrchestratorAgent(self.config)
+        self.request_log = RequestLog()
         self.app = web.Application()
         self._setup_routes()
         self._active_tasks: dict[str, asyncio.Task] = {}
@@ -26,6 +28,7 @@ class WebAgentServer:
         self.app.router.add_get("/health", self.handle_health)
         self.app.router.add_get("/status/{task_id}", self.handle_status)
         self.app.router.add_get("/config", self.handle_get_config)
+        self.app.router.add_get("/history", self.handle_history)
 
     async def handle_request(self, request: web.Request) -> web.Response:
         try:
@@ -48,9 +51,23 @@ class WebAgentServer:
         async def _run():
             try:
                 result = await self.orchestrator.handle_request(query, file_paths=file_paths)
+                self.request_log.add_entry(
+                    query=query,
+                    result=result,
+                    file_paths=file_paths or [],
+                    source="web search" if "web" in str(result).lower() else "AI knowledge",
+                    deep=deep,
+                )
                 return {"task_id": task_id, "status": "completed", "result": result}
             except Exception as e:
                 logger.error("Task %s failed: %s", task_id, e)
+                self.request_log.add_entry(
+                    query=query,
+                    result=f"Error: {str(e)}",
+                    file_paths=file_paths or [],
+                    source="error",
+                    deep=deep,
+                )
                 return {"task_id": task_id, "status": "failed", "error": str(e)}
 
         task = asyncio.create_task(_run())
@@ -97,6 +114,11 @@ class WebAgentServer:
             "skills_dir": self.config.effective_skills_dir,
             "guardrails_file": self.config.effective_guardrails_file,
         })
+
+    async def handle_history(self, request: web.Request) -> web.Response:
+        limit = int(request.query.get("limit", "0")) or None
+        entries = self.request_log.get_entries(limit=limit)
+        return web.json_response({"history": entries, "count": len(entries)})
 
     def run(self, host: Optional[str] = None, port: Optional[int] = None):
         host = host or self.config.server_host
