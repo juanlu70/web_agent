@@ -154,6 +154,7 @@ The server is a daemon that listens for HTTP requests and runs the orchestrator 
 | `GET` | `/config` | Get server configuration |
 | `GET` | `/status/{task_id}` | Check async task status |
 | `GET` | `/history` | Get request history |
+| `GET` | `/history/{entry_id}` | Get a specific history entry by ID |
 
 #### POST /request
 
@@ -223,6 +224,24 @@ Returns the full request history log. Each entry includes the query, result, fil
 }
 ```
 
+#### GET /history/{entry_id}
+
+Returns a single history entry by its ID. Useful for re-running past requests programmatically.
+
+**Response:**
+
+```json
+{
+  "id": "a1b2c3d4",
+  "timestamp": "2025-04-23T14:30:00",
+  "query": "search for wireless headphones",
+  "file_paths": [],
+  "result": "Here is a summary...",
+  "source": "web search",
+  "deep": false
+}
+```
+
 ---
 
 ## CLI Client (`web_agent_client.py`)
@@ -240,6 +259,7 @@ If no request is given, enters interactive mode.
 | `--deep` | off | Deep search: 50 results instead of 10 |
 | `--history` | off | Show request history from the server |
 | `--history-limit` | all | Limit number of history entries (use with `--history`) |
+| `--history-id` | — | Re-run a specific past request by its ID (shown in `--history`) |
 | `--config` | `config.yaml` | Path to YAML config file |
 | `--verbose`, `-v` | off | Enable debug logging |
 
@@ -272,6 +292,9 @@ You> exit
 
 # View last 5 requests
 ./web_agent_client.py --history --history-limit 5
+
+# Re-run a past request by ID (IDs shown in --history)
+./web_agent_client.py --history-id a1b2c3d4
 ```
 
 ---

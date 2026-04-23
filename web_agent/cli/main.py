@@ -34,6 +34,7 @@ async def send_request(client: WebAgentClient, query: str, deep: bool = False, f
 
 
 def format_history_entry(entry: dict, index: int) -> str:
+    entry_id = entry.get("id", "?")
     ts = entry.get("timestamp", "?")
     query = entry.get("query", "")
     files = entry.get("file_paths", [])
@@ -43,7 +44,7 @@ def format_history_entry(entry: dict, index: int) -> str:
     result_preview = result[:200] + "..." if len(result) > 200 else result
 
     lines = [
-        f"[{index}] {ts}",
+        f"[{index}] id={entry_id}  {ts}",
         f"  Query: {query}",
     ]
     if files:
@@ -168,6 +169,12 @@ def main() -> None:
         default=None,
         help="Limit number of history entries to show (with --history)",
     )
+    parser.add_argument(
+        "--history-id",
+        default=None,
+        dest="history_id",
+        help="Re-run a specific past request by its ID (shown in --history)",
+    )
 
     args = parser.parse_args()
 
@@ -182,6 +189,23 @@ def main() -> None:
 
     if args.history:
         asyncio.run(show_history(client, limit=args.history_limit))
+    elif args.history_id:
+        entry = asyncio.run(client.get_history_entry(args.history_id))
+        if entry is None:
+            print(f"No history entry found with ID '{args.history_id}'.")
+            print("Tip: use --history to list all entries with their IDs.")
+        else:
+            query = entry.get("query", "")
+            file_paths = entry.get("file_paths", []) or None
+            deep = entry.get("deep", False)
+            print(f"Re-running history entry {args.history_id}:")
+            print(f"  Query: {query}")
+            if file_paths:
+                print(f"  Files: {', '.join(file_paths)}")
+            print(f"  Deep: {deep}")
+            print()
+            result = asyncio.run(send_request(client, query, deep=deep, file_paths=file_paths))
+            print(result)
     elif request and file_paths:
         result = asyncio.run(send_request(client, request, deep=args.deep, file_paths=file_paths))
         print(result)

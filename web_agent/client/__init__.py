@@ -55,6 +55,14 @@ class WebAgentClient:
                 resp.raise_for_status()
                 return await resp.json()
 
+    async def get_history_entry(self, entry_id: str) -> Optional[dict]:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.server_url}/history/{entry_id}") as resp:
+                if resp.status == 404:
+                    return None
+                resp.raise_for_status()
+                return await resp.json()
+
     def sync_request(self, query: str, deep: bool = False, file_paths: Optional[list[str]] = None) -> dict:
         import asyncio
         return asyncio.run(self.request(query, deep=deep, file_paths=file_paths, sync=True))

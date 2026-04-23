@@ -29,6 +29,7 @@ class WebAgentServer:
         self.app.router.add_get("/status/{task_id}", self.handle_status)
         self.app.router.add_get("/config", self.handle_get_config)
         self.app.router.add_get("/history", self.handle_history)
+        self.app.router.add_get("/history/{entry_id}", self.handle_history_entry)
 
     async def handle_request(self, request: web.Request) -> web.Response:
         try:
@@ -119,6 +120,13 @@ class WebAgentServer:
         limit = int(request.query.get("limit", "0")) or None
         entries = self.request_log.get_entries(limit=limit)
         return web.json_response({"history": entries, "count": len(entries)})
+
+    async def handle_history_entry(self, request: web.Request) -> web.Response:
+        entry_id = request.match_info.get("entry_id", "")
+        entry = self.request_log.get_entry(entry_id)
+        if entry is None:
+            return web.json_response({"error": f"Entry '{entry_id}' not found"}, status=404)
+        return web.json_response(entry)
 
     def run(self, host: Optional[str] = None, port: Optional[int] = None):
         host = host or self.config.server_host
