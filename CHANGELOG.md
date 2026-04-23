@@ -2,6 +2,27 @@
 
 All notable changes to the web_agent project will be documented in this file.
 
+## [1.2.0] - 2025-04-23
+
+### Added
+
+- **Multi-provider LLM support**: Choose between Ollama, OpenAI, Anthropic, and OpenRouter
+  - `llm_provider` config field: `"ollama"`, `"openai"`, `"anthropic"`, `"openrouter"`
+  - `llm_api_url`, `llm_api_key`, `llm_model` fields for cloud providers
+  - OpenAI-compatible chat endpoint for OpenAI and OpenRouter
+  - Anthropic Messages API for Claude models
+- **Setup tool** (`web_agent_setup.py`): Interactive CLI to configure LLM provider and model
+  - Auto-detects Ollama models and lists them for selection
+  - Lists known models for OpenAI, Anthropic, OpenRouter
+  - Prompts for API keys for cloud providers
+  - Saves to `config.yaml`
+- **Unified `LLMClient`**: Replaces `OllamaClient` in orchestrator — routes to correct provider automatically
+
+### Changed
+
+- `OllamaClient` still exists internally but is wrapped by `LLMClient`
+- Config: `ollama_base_url` + `ollama_model` for Ollama, `llm_api_url` + `llm_api_key` + `llm_model` for cloud
+
 ## [1.1.0] - 2025-04-19
 
 ### Added
@@ -142,3 +163,5 @@ Inspired by OpenClaw's web browsing mechanism:
 - Tool-based LLM interaction pattern (browser, web_search, web_fetch tools)
 - Skill-based MCP for website navigation learning (matching OpenClaw's SKILL.md pattern)
 - Subagent spawning for parallel task execution (mirroring OpenClaw's sessions_spawn pattern)
+
+

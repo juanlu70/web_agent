@@ -8,8 +8,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 SKILLS_DIR = PROJECT_ROOT / "skills"
 DEFAULT_GUARDRAILS_PATH = PROJECT_ROOT / "guardrails.md"
-DEFAULT_OLLAMA_MODEL = "glm-5.1:cloud"
-DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_SERVER_HOST = "127.0.0.1"
 DEFAULT_SERVER_PORT = 8400
 
@@ -18,8 +16,12 @@ DEFAULT_SERVER_PORT = 8400
 class Config:
     server_host: str = DEFAULT_SERVER_HOST
     server_port: int = DEFAULT_SERVER_PORT
-    ollama_base_url: str = DEFAULT_OLLAMA_BASE_URL
-    ollama_model: str = DEFAULT_OLLAMA_MODEL
+    llm_provider: str = "ollama"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = ""
+    llm_api_url: str = ""
+    llm_api_key: str = ""
+    llm_model: str = ""
     skills_dir: str = str(SKILLS_DIR)
     guardrails_file: str = str(DEFAULT_GUARDRAILS_PATH)
     normal_search_results: int = 10
@@ -44,6 +46,10 @@ class Config:
             guardrails = known_fields.get("guardrails_file", "")
             if guardrails == "":
                 known_fields["guardrails_file"] = str(DEFAULT_GUARDRAILS_PATH)
+
+            if "ollama_model" not in known_fields and "llm_model" in known_fields:
+                known_fields["ollama_model"] = ""
+
             return cls(**known_fields)
         cfg = cls()
         cfg.save(str(config_path))
@@ -54,13 +60,12 @@ class Config:
         config_path.parent.mkdir(parents=True, exist_ok=True)
         data = {}
         for k, v in self.__dict__.items():
-            if k in ("skills_dir", "guardrails_file"):
-                if v == str(SKILLS_DIR):
-                    data[k] = ""
-                elif v == str(DEFAULT_GUARDRAILS_PATH):
-                    data[k] = ""
-                else:
-                    data[k] = v
+            if k == "skills_dir" and v == str(SKILLS_DIR):
+                data[k] = ""
+            elif k == "guardrails_file" and v == str(DEFAULT_GUARDRAILS_PATH):
+                data[k] = ""
+            elif k == "llm_api_key" and v:
+                data[k] = v
             else:
                 data[k] = v
         with open(config_path, "w") as f:
@@ -88,13 +93,23 @@ class Config:
     def server_url(self) -> str:
         return f"http://{self.server_host}:{self.server_port}"
 
+    @property
+    def effective_model(self) -> str:
+        if self.llm_provider == "ollama":
+            return self.ollama_model or self.llm_model
+        return self.llm_model
+
     @classmethod
     def from_env(cls) -> "Config":
         return cls(
             server_host=os.environ.get("WEB_AGENT_HOST", DEFAULT_SERVER_HOST),
             server_port=int(os.environ.get("WEB_AGENT_PORT", str(DEFAULT_SERVER_PORT))),
-            ollama_base_url=os.environ.get("OLLAMA_BASE_URL", DEFAULT_OLLAMA_BASE_URL),
-            ollama_model=os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
+            llm_provider=os.environ.get("WEB_AGENT_LLM_PROVIDER", "ollama"),
+            ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434"),
+            ollama_model=os.environ.get("OLLAMA_MODEL", ""),
+            llm_api_url=os.environ.get("WEB_AGENT_LLM_API_URL", ""),
+            llm_api_key=os.environ.get("WEB_AGENT_LLM_API_KEY", ""),
+            llm_model=os.environ.get("WEB_AGENT_LLM_MODEL", ""),
             skills_dir=os.environ.get("WEB_AGENT_SKILLS_DIR", str(SKILLS_DIR)),
             guardrails_file=os.environ.get("WEB_AGENT_GUARDRAILS_FILE", str(DEFAULT_GUARDRAILS_PATH)),
             headless=os.environ.get("WEB_AGENT_HEADLESS", "true").lower() == "true",

@@ -11,7 +11,7 @@ from typing import Optional
 from web_agent.agent.conversation_history import ConversationHistory
 from web_agent.browser.session import BrowserSession
 from web_agent.config.settings import Config
-from web_agent.llm.ollama_client import OllamaClient
+from web_agent.llm.llm_client import LLMClient
 from web_agent.search.google_scraper import GoogleSearchScraper
 from web_agent.skills.skill_manager import SkillManager
 from web_agent.tools.file_analyzer import FileAnalyzer
@@ -95,7 +95,7 @@ class BrowsingAgent:
         self.depth = depth
         self.deep = deep
         self.guardrails = guardrails
-        self.llm = OllamaClient(self.config)
+        self.llm = LLMClient(self.config)
         self.browser = BrowserSession(self.config)
         self.search_scraper = GoogleSearchScraper(self.config)
         self.skill_manager = SkillManager(self.config.effective_skills_dir)
@@ -228,7 +228,7 @@ class AnalysisAgent:
     def __init__(self, config: Optional[Config] = None, guardrails: str = ""):
         self.config = config or Config()
         self.guardrails = guardrails
-        self.llm = OllamaClient(self.config)
+        self.llm = LLMClient(self.config)
         self.file_analyzer = FileAnalyzer()
 
     async def analyze(self, request: str, file_paths: list[str]) -> str:
@@ -319,7 +319,7 @@ class OrchestratorAgent:
     def __init__(self, config: Optional[Config] = None, deep: bool = False):
         self.config = config or Config()
         self.deep = deep
-        self.llm = OllamaClient(self.config)
+        self.llm = LLMClient(self.config)
         self.skill_manager = SkillManager(self.config.effective_skills_dir)
         self.guardrails = self.config.load_guardrails()
         self.analysis_agent = AnalysisAgent(self.config, guardrails=self.guardrails)
