@@ -13,13 +13,34 @@ from web_agent.config.settings import Config
 
 logger = logging.getLogger(__name__)
 
+CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+
+@web.middleware
+async def cors_middleware(request: web.Request, handler):
+    origin = request.headers.get("Origin", "")
+    if origin in CORS_ORIGINS:
+        if request.method == "OPTIONS":
+            response = web.Response(status=204)
+        else:
+            response = await handler(request)
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Max-Age"] = "86400"
+        return response
+    return await handler(request)
+
 
 class WebAgentServer:
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()
         self.orchestrator = OrchestratorAgent(self.config)
         self.request_log = RequestLog()
-        self.app = web.Application()
+        self.app = web.Application(middlewares=[cors_middleware])
         self._setup_routes()
         self._active_tasks: dict[str, asyncio.Task] = {}
 
@@ -27,6 +48,7 @@ class WebAgentServer:
         self.app.router.add_post("/request", self.handle_request)
         self.app.router.add_get("/health", self.handle_health)
         self.app.router.add_get("/status/{task_id}", self.handle_status)
+        self.app.router.add_delete("/cancel/{task_id}", self.handle_cancel)
         self.app.router.add_get("/config", self.handle_get_config)
         self.app.router.add_get("/history", self.handle_history)
         self.app.router.add_get("/history/{entry_id}", self.handle_history_entry)
@@ -47,6 +69,7 @@ class WebAgentServer:
             file_paths = [file_paths]
         file_paths = file_paths or None
 
+        sync = data.get("sync", False)
         task_id = str(uuid.uuid4())[:8]
 
         async def _run():
@@ -60,6 +83,16 @@ class WebAgentServer:
                     deep=deep,
                 )
                 return {"task_id": task_id, "status": "completed", "result": result}
+            except asyncio.CancelledError:
+                logger.info("Task %s was cancelled", task_id)
+                self.request_log.add_entry(
+                    query=query,
+                    result="Search cancelled by user",
+                    file_paths=file_paths or [],
+                    source="cancelled",
+                    deep=deep,
+                )
+                return {"task_id": task_id, "status": "cancelled", "result": "Search cancelled by user"}
             except Exception as e:
                 logger.error("Task %s failed: %s", task_id, e)
                 self.request_log.add_entry(
@@ -74,7 +107,7 @@ class WebAgentServer:
         task = asyncio.create_task(_run())
         self._active_tasks[task_id] = task
 
-        if data.get("sync", True):
+        if sync:
             result = await task
             self._active_tasks.pop(task_id, None)
             return web.json_response(result)
@@ -91,6 +124,18 @@ class WebAgentServer:
             self._active_tasks.pop(task_id, None)
             return web.json_response(result)
         return web.json_response({"task_id": task_id, "status": "running"})
+
+    async def handle_cancel(self, request: web.Request) -> web.Response:
+        task_id = request.match_info.get("task_id", "")
+        task = self._active_tasks.get(task_id)
+        if task is None:
+            return web.json_response({"task_id": task_id, "status": "unknown"})
+        if task.done():
+            self._active_tasks.pop(task_id, None)
+            return web.json_response({"task_id": task_id, "status": "already_done"})
+        task.cancel()
+        logger.info("Cancelled task %s", task_id)
+        return web.json_response({"task_id": task_id, "status": "cancelling"})
 
     async def handle_health(self, request: web.Request) -> web.Response:
         return web.json_response({

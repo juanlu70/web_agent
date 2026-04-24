@@ -125,7 +125,8 @@ You can also edit `config.yaml` directly (see [Configuration](#configuration-con
 ./web_agent_client.py --history --history-limit 5
 
 # Web UI
-streamlit run web_agent/ui/app.py
+./web_agent_ui.py         # dev mode (port 3000)
+./web_agent_ui.py --build # production build + start
 ```
 
 ---
@@ -153,6 +154,7 @@ The server is a daemon that listens for HTTP requests and runs the orchestrator 
 | `GET` | `/health` | Server health check |
 | `GET` | `/config` | Get server configuration |
 | `GET` | `/status/{task_id}` | Check async task status |
+| `DELETE` | `/cancel/{task_id}` | Cancel a running task |
 | `GET` | `/history` | Get request history |
 | `GET` | `/history/{entry_id}` | Get a specific history entry by ID |
 
@@ -299,13 +301,32 @@ You> exit
 
 ---
 
-## Streamlit Web UI
+## Next.js Web UI
+
+A ChatGPT-style web interface built with Next.js, TypeScript, and Tailwind CSS.
 
 ```bash
-streamlit run web_agent/ui/app.py
+# Development mode (hot reload)
+./web_agent_ui.py
+
+# Or directly:
+cd web_agent/web && pnpm dev
+
+# Production build + start
+./web_agent_ui.py --build
 ```
 
-The sidebar provides controls for all settings: server URL, deep search, file upload (multiple files), config display, logging, and request history. Opens at `http://localhost:8501`.
+Opens at `http://localhost:3000`.
+
+### Features
+
+- **ChatGPT-style layout**: Sidebar with conversation threads, main chat area, input bar
+- **Conversation threads**: Create, switch, and delete separate chat threads
+- **File upload**: Attach files for analysis via the input bar
+- **Deep search toggle**: Enable 50-result deep search per message
+- **Markdown rendering**: Assistant responses render with full markdown (code blocks, tables, etc.)
+- **Request history**: View and re-run past requests from the history panel
+- **Server connection status**: Live indicator showing server connectivity and model
 
 ---
 
@@ -420,7 +441,7 @@ skills/                   # Website navigation skills
   web-browsing/SKILL.md
   linkedin/SKILL.md
 web_agent/
-  server/                 # HTTP server (aiohttp)
+  server/                 # HTTP server (aiohttp) with CORS
   client/                 # HTTP client
   agent/                  # Orchestrator, BrowsingAgent, AnalysisAgent
   agent/request_log.py   # Structured request history logger (JSON)
@@ -430,7 +451,7 @@ web_agent/
   skills/                 # Skill manager (SKILL.md loader)
   tools/                  # browser, web_search, web_fetch, file_analyzer
   config/                 # Settings (YAML loader)
-  ui/                     # Streamlit app
+  web/                    # Next.js frontend (TypeScript, Tailwind)
   cli/                    # CLI client
 trash/                    # Downloaded files from browsing
 ```

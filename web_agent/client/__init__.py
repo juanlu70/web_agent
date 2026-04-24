@@ -63,6 +63,12 @@ class WebAgentClient:
                 resp.raise_for_status()
                 return await resp.json()
 
+    async def cancel(self, task_id: str) -> dict:
+        async with aiohttp.ClientSession() as session:
+            async with session.delete(f"{self.server_url}/cancel/{task_id}") as resp:
+                resp.raise_for_status()
+                return await resp.json()
+
     def sync_request(self, query: str, deep: bool = False, file_paths: Optional[list[str]] = None) -> dict:
         import asyncio
         return asyncio.run(self.request(query, deep=deep, file_paths=file_paths, sync=True))

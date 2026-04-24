@@ -13,7 +13,24 @@ All notable changes to the web_agent project will be documented in this file.
 - **`--history` CLI flag**: View request history from the command line
 - **`--history-limit` CLI flag**: Limit number of history entries displayed (use with `--history`)
 - **`--history-id` CLI flag**: Re-run a specific past request by its ID (IDs are shown in `--history` output)
-- **Streamlit UI history view**: Toggle "📋 Request History" in sidebar to browse past requests with expandable details (query, files, mode, result preview)
+- **Next.js web UI**: Replaced Streamlit with a ChatGPT-style Next.js frontend (TypeScript + Tailwind CSS)
+  - **Centered input**: Empty state shows a centered input box (ChatGPT-style); once messages exist, input moves to bottom
+  - **Deep search pill**: On/off toggle inside the input bar (purple pill labeled "Deep")
+  - **History in sidebar**: Left panel has "Chats" / "History" tabs — history shows all past requests with refresh + re-run
+  - **Stop button**: During search, "Searching..." shows a Stop button that cancels the running task
+  - **Task cancellation**: New `DELETE /cancel/{task_id}` endpoint cancels running orchestrator tasks (async.CancelledError)
+  - Conversation threads with create/switch/delete in sidebar
+  - ChatGPT-style message layout with markdown rendering (react-markdown + remark-gfm)
+  - File upload in input bar with attachment badges
+  - Server connection status indicator in header
+  - API uses async mode (sync=false) with client-side polling for cancellability
+  - CORS middleware (function-based) for cross-origin requests from localhost:3000
+  - **Theme toggle**: Light / Dark / System with manual override and localStorage persistence
+  - **Settings panel**: Server URL input, connection test, active model, theme switcher
+- **Client**: Added `cancel()` method to `WebAgentClient`
+- **Server**: `POST /request` default changed to `sync=false` for web UI; CLI client still sends `sync=true`
+- **`web_agent_ui.py` launcher updated**: Now launches `pnpm dev` / `pnpm start`
+- **Streamlit UI removed**: `streamlit` removed from `requirements.txt`
 
 ## [1.2.0] - 2025-04-23
 
