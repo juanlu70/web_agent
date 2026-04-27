@@ -9,7 +9,7 @@ It is intended as a mix of a personal Perplexity and OpenClaw but without the in
 
 ```
 ┌──────────────┐   ┌─────────────┐   ┌─────────────┐
-│  CLI Client  │   │  Streamlit  │   │  HTTP API   │
+│  CLI Client  │   │  Next.js   │   │  HTTP API   │
 │  (terminal)  │   │  Web UI     │   │  (curl,etc) │
 └──────┬───────┘   └──────┬──────┘   └──────┬──────┘
        │                  │                 │
@@ -34,15 +34,58 @@ The server is the main orchestrator. Clients connect via HTTP. The orchestrator 
 ## Requirements
 
 - Python 3.11+
+- Node.js 18+ (for the web UI)
+- [pnpm](https://pnpm.io) (for the web UI)
 - An LLM provider: [Ollama](https://ollama.ai) (local, free) **or** an OpenAI/Anthropic/OpenRouter API key
 - Chromium (for Playwright — auto-installed)
 
 ## Install
 
+### Python backend
+
 ```bash
 pip install -r requirements.txt
 playwright install chromium
 ```
+
+### Web UI (Next.js)
+
+The web UI is a Next.js application located at `web_agent/web/`. You need Node.js (18+) and pnpm installed.
+
+**1. Install Node.js** (if you don't have it):
+
+Using [nvm](https://github.com/nvm-sh/nvm) (recommended):
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+source ~/.bashrc
+nvm install --lts
+```
+
+Or download directly from [nodejs.org](https://nodejs.org/).
+
+**2. Install pnpm:**
+
+```bash
+npm install -g pnpm
+```
+
+**3. Install web UI dependencies:**
+
+```bash
+cd web_agent/web
+pnpm install
+```
+
+This installs Next.js, React, Tailwind CSS, and all other dependencies defined in `package.json`.
+
+**4. Verify the installation:**
+
+```bash
+pnpm build
+```
+
+If the build succeeds, the web UI is ready to run.
 
 ## Setup
 

@@ -123,7 +123,7 @@ async def interactive_mode(client: WebAgentClient, deep: bool = False) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="web_agent_client",
+        prog="web_agent",
         description="Client for the Web Agent server",
     )
     parser.add_argument(
