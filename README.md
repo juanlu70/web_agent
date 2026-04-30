@@ -9,7 +9,7 @@ It is intended as a mix of a personal Perplexity and OpenClaw but without the in
 
 ```
 ┌──────────────┐   ┌─────────────┐   ┌─────────────┐
-│  CLI Client  │   │  Next.js   │   │  HTTP API   │
+│  CLI Client  │   │  Next.js    │   │  HTTP API   │
 │  (terminal)  │   │  Web UI     │   │  (curl,etc) │
 └──────┬───────┘   └──────┬──────┘   └──────┬──────┘
        │                  │                 │
