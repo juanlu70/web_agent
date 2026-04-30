@@ -4,6 +4,8 @@ A browser agent managed by IA. It searches the web, gathers information, and ana
 
 It is intended as a mix of a personal Perplexity and OpenClaw but without the insecure environment of OpenClaw.
 
+![web_agent](web_agent.jpeg)
+
 
 ## Architecture
 
