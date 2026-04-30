@@ -1,0 +1,75 @@
+One of the rubric criteria is overly specific and requires something the prompt did not ask for. Identify the bad rubric criterion and explain why it is overly specific.
+
+Instructions
+Read the prompt and rubric. Then:
+
+
+
+
+
+identify the rubric criterion number that is overly specific
+
+
+
+explain what the criterion requires
+
+
+
+explain why that requirement is not supported by the prompt
+
+
+
+explain why this makes the criterion flawed
+
+Your answer must clearly connect the rubric problem to what the prompt actually asks for.
+
+Prompt:
+
+--
+Hi, I’m trying to decide between three mortgage offers in my workspace, but the numbers don’t seem to line up across the files and I’m getting confused. Can you go through all the relevant documents (loan offers, broker notes, my borrower profile, and the policy file), compare the options properly, and help me understand which one is actually the safest choice—not just the cheapest? If anything is inconsistent or missing, please flag it clearly for me instead of guessing. Please follow the rules in mortgage_policy.txt, especially around eligibility limits and handling missing information. Also, make sure you absolutely do not include any sensitive personal details in the output. Could you save your final report as property_mortgage_report.md? Please organize it clearly with a summary, a comparison table, a list of the inconsistencies and missing data you found, and your final YES/NO recommendation on whether I should proceed. Also, keep a detailed log of everything you do (files you read, decisions you make, math you calculate) in MEMORY.md so I can see your work. I won’t be available to answer questions, so use your best judgment and proceed carefully.
+--
+
+Rubric:
+
+---
+Write criteria to assess each model's performance. Criteria must be task-specific, avoid general/non-relevant criteria.
+
+1  `property_mortgage_report.md` contains exactly seven section headings with the exact texts: "Summary", "Loan Comparison Table", "Inconsistencies Detected", "Missing Data Flags", "Compliance Risk", "Recommended Option", "Final Decision" (each appearing once) and contains no other markdown headings.
+5 points
+
+2  The `Summary` section contains exactly 2 or 3 sentences (sentences delimited by `.`, `!`, or `?`).
+3 points
+
+3  The `Loan Comparison Table` contains a header row with exactly these columns in this order: `Offer ID | Lender | Loan Amount | Stated Rate | Normalized Annual Rate | Total Repayment | Fees | Prepayment Penalty | EMI (calculated)`.
+5 points
+
+4  The `Loan Comparison Table` contains exactly 3 data rows (excluding the header row).
+5 points
+
+5  The `Offer ID` values in the 3 `Loan Comparison Table` data rows are exactly `LN-2201`, `LN-2202`, and `LN-2203` (each appearing once).
+5 points
+
+6  The `Inconsistencies Detected` section contains exactly 3 bullet items.
+5 points
+
+7  One bullet in `Inconsistencies Detected` mentions `LN-2201` and includes both `7.5%` and `7.05%` in the same bullet item.
+3 points
+
+8  One bullet in `Inconsistencies Detected` mentions `LN-2202` and includes the amount `$1,850` in the same bullet item.
+3 points
+
+9  One bullet in `Inconsistencies Detected` mentions `LN-2202` and includes both `$1,240` and either `~$1,388` or `$1,388` in the same bullet item.
+3 points
+
+10 The `Missing Data Flags` section contains exactly 1 bullet item.
+3 points
+
+11 The single `Missing Data Flags` bullet item includes `LN-2203` and the phrase `prepayment penalty` and indicates it is missing (e.g., contains `missing`).
+3 points
+
+12 The `Compliance Risk` section states that `DTI` is `43%` and that it is at the `policy threshold`, and includes the phrase `approval is not guaranteed`.
+5 points
+
+13 The `Recommended Option` section names exactly one of `LN-2201`, `LN-2202`, or `LN-2203` as the recommended loan (and does not name more than one as recommended).
+3 points
+---
