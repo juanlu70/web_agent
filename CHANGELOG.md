@@ -2,6 +2,38 @@
 
 All notable changes to the web_agent project will be documented in this file.
 
+## [1.4.0] - 2025-04-30
+
+### Added
+
+- **User Memory system** (`web_agent/agent/user_memory.py`): Personal memory stored in `~/.web_agent/MEMORY.md`
+  - Long-term memory: preferences, personal context, and notes persisted in MEMORY.md and `memory/YYYY-MM-DD.md` dated entries
+  - Short-term memory: in-memory session observations (max 10), flushable to long-term memory
+  - Memory context injected into all orchestrator prompts (AI-first check, task planning, browsing)
+  - Server API: `GET /memory` (read), `POST /memory` (save/append/flush short-term)
+- **Heartbeat system** (`web_agent/agent/heartbeat.py`): Recurring task execution inspired by OpenClaw
+  - `HEARTBEAT.md` file (at `~/.web_agent/HEARTBEAT.md`) defines scheduled tasks with YAML frontmatter
+  - Task definition: `name`, `interval` (e.g., 30m, 1h, 24h), `prompt`
+  - Periodic runner checks due tasks and sends them to the orchestrator
+  - State persistence (`heartbeat_state.json`) so tasks survive restarts
+  - Enabled via `heartbeat_enabled: true` + `heartbeat_every: "30m"` in `config.yaml`
+  - Server API: `GET /heartbeat/status`
+- **Cron service** (`web_agent/agent/cron_service.py`): Precise scheduled task execution
+  - Three schedule types: `cron` (standard 5-field expressions), `every` (interval in seconds), `at` (one-shot ISO timestamp)
+  - JSON persistence at `~/.web_agent/cron/jobs.json`
+  - Jobs run as isolated orchestrator requests
+  - Auto-disabled after consecutive errors
+  - Enabled via `cron_enabled: true` in `config.yaml`
+  - Server API: `GET /cron`, `POST /cron`, `DELETE /cron/{job_id}`
+- **Default templates**: `web_agent/defaults/MEMORY.md` and `web_agent/defaults/HEARTBEAT.md`
+- **Config fields**: `heartbeat_enabled`, `heartbeat_every`, `cron_enabled`
+
+### Changed
+
+- `web_agent.py` renamed to `web_agent_server.py` (server entry point)
+- `web_agent_client.py` renamed to `web_agent.py` (CLI client entry point)
+- CLI `prog` name updated from `web_agent_client` to `web_agent`
+
 ## [1.3.0] - 2025-04-23
 
 ### Added

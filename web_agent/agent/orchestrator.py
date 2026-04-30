@@ -9,6 +9,7 @@ from enum import Enum
 from typing import Optional
 
 from web_agent.agent.conversation_history import ConversationHistory
+from web_agent.agent.user_memory import UserMemory
 from web_agent.browser.session import BrowserSession
 from web_agent.config.settings import Config
 from web_agent.llm.llm_client import LLMClient
@@ -324,6 +325,7 @@ class OrchestratorAgent:
         self.guardrails = self.config.load_guardrails()
         self.analysis_agent = AnalysisAgent(self.config, guardrails=self.guardrails)
         self.conversation_history = ConversationHistory(max_entries=self.config.max_history_entries)
+        self.user_memory = UserMemory()
         self.active_agents: dict[str, AgentResult] = {}
 
     async def handle_request(self, request: str, file_paths: Optional[list[str]] = None) -> str:
@@ -337,6 +339,9 @@ class OrchestratorAgent:
 
         target_domains = extract_target_domains(request)
         history_context = self.conversation_history.get_context_for_prompt()
+        memory_context = self.user_memory.get_context_for_prompt()
+        short_term = self.user_memory.get_short_term_context()
+        full_context = "\n\n".join(filter(None, [memory_context, short_term, history_context]))
 
         if target_domains:
             logger.info("Step: domain-specific request detected → domains: %s (skipping Google search)", ", ".join(target_domains))
@@ -360,7 +365,7 @@ class OrchestratorAgent:
 
         logger.info("Step: asking AI model for answer from knowledge...")
 
-        ai_answer = await self._ask_ai_first(request, history_context)
+        ai_answer = await self._ask_ai_first(request, full_context)
 
         if ai_answer is not None:
             logger.info("Step: AI model answered from own knowledge (no web search)")
@@ -371,7 +376,7 @@ class OrchestratorAgent:
 
         self.skill_manager.load_skills()
 
-        plan = await self._plan_task(request, history_context)
+        plan = await self._plan_task(request, full_context)
 
         if plan.get("direct", False):
             logger.info("Step: dispatching single browsing agent (direct search)")

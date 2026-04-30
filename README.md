@@ -141,7 +141,7 @@ Select model [1]: 1
 Save configuration? [Y/n]: Y
   Saved to .../config.yaml
 
-Setup complete. You can now start the server with: ./web_agent.py
+Setup complete. You can now start the server with: ./web_agent_server.py
 ```
 
 You can also edit `config.yaml` directly (see [Configuration](#configuration-configyaml) below).
@@ -151,21 +151,21 @@ You can also edit `config.yaml` directly (see [Configuration](#configuration-con
 **1. Start the server:**
 
 ```bash
-./web_agent.py
+./web_agent_server.py
 ```
 
 **2. Query from a client:**
 
 ```bash
 # Single query
-./web_agent_client.py "search for wireless headphones"
+./web_agent.py "search for wireless headphones"
 
 # Interactive mode
-./web_agent_client.py
+./web_agent.py
 
 # View request history
-./web_agent_client.py --history
-./web_agent_client.py --history --history-limit 5
+./web_agent.py --history
+./web_agent.py --history --history-limit 5
 
 # Web UI
 ./web_agent_ui.py         # dev mode (port 3000)
@@ -174,12 +174,12 @@ You can also edit `config.yaml` directly (see [Configuration](#configuration-con
 
 ---
 
-## Server (`web_agent.py`)
+## Server (`web_agent_server.py`)
 
 The server is a daemon that listens for HTTP requests and runs the orchestrator with browsing agents.
 
 ```bash
-./web_agent.py [OPTIONS]
+./web_agent_server.py [OPTIONS]
 ```
 
 | Flag | Default | Description |
@@ -200,6 +200,12 @@ The server is a daemon that listens for HTTP requests and runs the orchestrator 
 | `DELETE` | `/cancel/{task_id}` | Cancel a running task |
 | `GET` | `/history` | Get request history |
 | `GET` | `/history/{entry_id}` | Get a specific history entry by ID |
+| `GET` | `/memory` | Get user memory (MEMORY.md) |
+| `POST` | `/memory` | Update user memory |
+| `GET` | `/cron` | List cron jobs |
+| `POST` | `/cron` | Add a cron job |
+| `DELETE` | `/cron/{job_id}` | Remove a cron job |
+| `GET` | `/heartbeat/status` | Get heartbeat status |
 
 #### POST /request
 
@@ -289,10 +295,10 @@ Returns a single history entry by its ID. Useful for re-running past requests pr
 
 ---
 
-## CLI Client (`web_agent_client.py`)
+## CLI Client (`web_agent.py`)
 
 ```bash
-./web_agent_client.py [REQUEST] [OPTIONS]
+./web_agent.py [REQUEST] [OPTIONS]
 ```
 
 If no request is given, enters interactive mode.
@@ -312,34 +318,34 @@ If no request is given, enters interactive mode.
 
 ```bash
 # Web search
-./web_agent_client.py "search for Python async tutorials"
+./web_agent.py "search for Python async tutorials"
 
 # Deep search (50 results, slower)
-./web_agent_client.py --deep "compare React vs Vue frameworks"
+./web_agent.py --deep "compare React vs Vue frameworks"
 
 # Analyze one file
-./web_agent_client.py -f report.pdf "summarize this report"
+./web_agent.py -f report.pdf "summarize this report"
 
 # Analyze multiple files
-./web_agent_client.py -f report.pdf notes.md data.csv "compare these documents"
+./web_agent.py -f report.pdf notes.md data.csv "compare these documents"
 
 # Connect to remote server
-./web_agent_client.py --server http://192.168.1.10:8400 "search for laptops"
+./web_agent.py --server http://192.168.1.10:8400 "search for laptops"
 
 # Interactive mode
-./web_agent_client.py
+./web_agent.py
 You> search for wireless headphones
 You> file:report.pdf,notes.md compare both
 You> exit
 
 # View request history
-./web_agent_client.py --history
+./web_agent.py --history
 
 # View last 5 requests
-./web_agent_client.py --history --history-limit 5
+./web_agent.py --history --history-limit 5
 
 # Re-run a past request by ID (IDs shown in --history)
-./web_agent_client.py --history-id a1b2c3d4
+./web_agent.py --history-id a1b2c3d4
 ```
 
 ---
@@ -383,7 +389,10 @@ Opens at `http://localhost:3000`.
 6. **Skills**: The agent learns how to browse specific websites from `skills/*.md` files
 7. **Guardrails**: Safety rules from `guardrails.md` are injected into all agents
 8. **Conversation history**: Last 15 interactions are stored and used as context for future requests
-9. **Request log**: All requests (including files provided) are logged to `~/.web_agent/request_log.json` and accessible via `--history` CLI flag, `/history` API endpoint, or the Streamlit UI
+9. **Request log**: All requests (including files provided) are logged to `~/.web_agent/request_log.json` and accessible via `--history` CLI flag, `/history` API endpoint, or the web UI
+10. **User Memory**: Personal preferences and context stored in `~/.web_agent/MEMORY.md`, injected into all prompts
+11. **Heartbeat**: Recurring tasks defined in `~/.web_agent/HEARTBEAT.md`, executed automatically on a schedule
+12. **Cron**: Precise scheduled jobs (cron expressions, intervals, one-shot) stored in `~/.web_agent/cron/jobs.json`
 
 ---
 
@@ -421,6 +430,13 @@ guardrails_file: ""
 
 # History
 max_history_entries: 15
+
+# Heartbeat (recurring tasks)
+heartbeat_enabled: false    # set true to enable
+heartbeat_every: "30m"      # check interval
+
+# Cron (precise scheduled jobs)
+cron_enabled: false          # set true to enable
 ```
 
 ### LLM Providers
@@ -471,11 +487,96 @@ llm_model: "openai/gpt-4o"
 
 ---
 
+## User Memory (`~/.web_agent/MEMORY.md`)
+
+The agent reads your personal memory file before every request. Store your preferences, personal context, and notes there.
+
+**Template** (copy from `web_agent/defaults/MEMORY.md` to `~/.web_agent/MEMORY.md`):
+
+```markdown
+# User Memory
+
+## Preferences
+- Language: English
+- Response style: concise and technical
+
+## Personal Context
+- I work as a software engineer
+- I prefer Python for scripting
+```
+
+- **Long-term**: `MEMORY.md` + dated entries in `memory/YYYY-MM-DD.md`
+- **Short-term**: Session observations kept in memory (max 10), flushable to long-term storage
+- **API**: `GET /memory` to read, `POST /memory` with `{"content": "..."}` or `{"append": "..."}` or `{"short_term": "..."}` or `{"flush_short_term": "summary"}`
+
+---
+
+## Heartbeat (`~/.web_agent/HEARTBEAT.md`)
+
+Recurring tasks that the agent executes automatically on a schedule. Inspired by OpenClaw's heartbeat system.
+
+**Template** (copy from `web_agent/defaults/HEARTBEAT.md` to `~/.web_agent/HEARTBEAT.md`):
+
+```markdown
+---
+tasks:
+  - name: morning-briefing
+    interval: 24h
+    prompt: "Give me a morning briefing with top news"
+  - name: github-check
+    interval: 1h
+    prompt: "Check my GitHub notifications"
+---
+```
+
+Enable in `config.yaml`:
+
+```yaml
+heartbeat_enabled: true
+heartbeat_every: "30m"
+```
+
+- **API**: `GET /heartbeat/status` returns task list and due tasks
+- Agent replies `HEARTBEAT_OK` when nothing needs attention
+
+---
+
+## Cron Service (`~/.web_agent/cron/jobs.json`)
+
+Precise scheduled task execution with three schedule types:
+
+| Type | Format | Example |
+|------|--------|---------|
+| `cron` | Standard 5-field cron expression | `0 9 * * 1-5` (weekdays 9am) |
+| `every` | Interval in seconds | `schedule_interval_seconds: 3600` (every hour) |
+| `at` | ISO-8601 timestamp (one-shot) | `schedule_at: "2025-05-01T09:00:00"` |
+
+Enable in `config.yaml`:
+
+```yaml
+cron_enabled: true
+```
+
+**Add a cron job via API:**
+
+```bash
+curl -X POST http://localhost:8400/cron -H 'Content-Type: application/json' -d '{
+  "name": "daily-summary",
+  "prompt": "Summarize today's Hacker News top posts",
+  "schedule_kind": "cron",
+  "schedule_expr": "0 9 * * *"
+}'
+```
+
+**List jobs:** `GET /cron` | **Remove:** `DELETE /cron/{job_id}`
+
+---
+
 ## Project Structure
 
 ```
-web_agent.py              # Server entry point
-web_agent_client.py       # CLI client entry point
+web_agent_server.py       # Server entry point
+web_agent.py              # CLI client entry point
 web_agent_setup.py        # Interactive setup tool (provider & model config)
 config.yaml               # Main configuration
 guardrails.md             # Safety rules for all agents
@@ -488,6 +589,9 @@ web_agent/
   client/                 # HTTP client
   agent/                  # Orchestrator, BrowsingAgent, AnalysisAgent
   agent/request_log.py   # Structured request history logger (JSON)
+  agent/user_memory.py   # User memory (MEMORY.md + short-term)
+  agent/heartbeat.py     # Heartbeat runner (HEARTBEAT.md task scheduler)
+  agent/cron_service.py  # Cron job service (precise scheduling)
   browser/                # Playwright browser session
   search/                 # Google search scraper
   llm/                    # Unified LLM client (Ollama, OpenAI, Anthropic, OpenRouter)

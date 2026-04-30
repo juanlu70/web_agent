@@ -32,6 +32,9 @@ class Config:
     subagent_depth_limit: int = 3
     max_agent_iterations: int = 10
     max_history_entries: int = 15
+    heartbeat_enabled: bool = False
+    heartbeat_every: str = "30m"
+    cron_enabled: bool = False
 
     @classmethod
     def load(cls, path: Optional[str] = None) -> "Config":
